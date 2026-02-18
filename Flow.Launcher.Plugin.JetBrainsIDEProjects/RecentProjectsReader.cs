@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Windows.Input;
 using System.Xml;
-using static System.Runtime.CompilerServices.RuntimeHelpers;
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects;
 
-internal static class RecentProjectsReader
+static partial class RecentProjectsReader
 {
     private static readonly string ToolboxDirectoryPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JetBrains", "Toolbox");
@@ -23,19 +21,22 @@ internal static class RecentProjectsReader
 
     private static readonly string[] BlacklistedToolIds = { "Space" };
 
-    private static String ConvertDisplayNameToProduct(string displayName)
+    private static string ConvertDisplayNameToProduct(string displayName)
     {
         // handle like IntelliJ IDEA Ultimate
         if (displayName.StartsWith("IntelliJ IDEA"))
         {
             return "(IntelliJIdea|IntelliJ|IdeaIC)";
-        } else if (displayName.StartsWith("PyCharm"))
+        }
+        else if (displayName.StartsWith("PyCharm"))
         {
             return "PyCharm";
-        } else if (displayName.StartsWith("Android Studio"))
+        }
+        else if (displayName.StartsWith("Android Studio"))
         {
             return "AndroidStudio";
         }
+
         return displayName;
     }
 
@@ -91,6 +92,7 @@ internal static class RecentProjectsReader
                 Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Install location or exe not found");
                 continue;
             }
+
             // ref. https://www.jetbrains.com/help/idea/directories-used-by-the-ide-to-store-settings-caches-plugins-and-logs.html#config-directory
             // version:like 2023.3
             // convert <number>.<number><whatsoever> to <number>.<number>
@@ -101,6 +103,7 @@ internal static class RecentProjectsReader
                 Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Version not found");
                 continue;
             }
+
             var version = match.Value;
 
             var conversion = ConvertDisplayNameToProduct(application.DisplayName);
@@ -117,9 +120,10 @@ internal static class RecentProjectsReader
 
             var flMatch = Directory.GetDirectories(configDirectoryPath)
                 .Where(file => Regex.IsMatch(Path.GetFileName(file),
-                @$"{conversion}{version}"))
+                    @$"{conversion}{version}"))
                 .Select(file => new FileInfo(file))
-                .OrderByDescending(fi => fi.LastWriteTimeUtc).FirstOrDefault()
+                .OrderByDescending(fi => fi.LastWriteTimeUtc)
+                .FirstOrDefault()
                 ?.Name;
             if (flMatch == null)
             {
@@ -146,7 +150,7 @@ internal static class RecentProjectsReader
                 "options",
                 "recentSolutions.xml"
             );
-            String recentProjectsXMLPathFinal =
+            var recentProjectsXMLPathFinal =
                 File.Exists(recentProjectsXMLPath) ? recentProjectsXMLPath : recentSolutionsXMLPath;
             if (!File.Exists(recentProjectsXMLPathFinal))
             {
@@ -154,37 +158,29 @@ internal static class RecentProjectsReader
                 continue;
             }
 
-            var recentProjectsXML = new XmlDocument();
-            recentProjectsXML.Load(recentProjectsXMLPathFinal);
-            var entries = recentProjectsXML.SelectNodes(
-                "/application/component[@name='RecentProjectsManager']/option[@name='additionalInfo']/map/entry");
+            var xmlDocument = new XmlDocument();
+            xmlDocument.Load(recentProjectsXMLPathFinal);
 
+            var entries = xmlDocument.GetEntries();
             if (entries is null || entries.Count == 0)
             {
-                // try again with RiderRecentProjectsManager
-                entries = recentProjectsXML.SelectNodes(
-                "/application/component[@name='RiderRecentProjectsManager']/option[@name='additionalInfo']/map/entry");
-                if (entries is null || entries.Count == 0)
-                {
-                    Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): No recent projects found");
-                    continue;
-                }
+                Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): No recent projects found");
+                continue;
             }
 
             foreach (XmlNode entry in entries)
             {
-                var entryKey = entry.Attributes?["key"]?.Value;
-                if (entryKey is null)
+                var entryKeyValue = entry.Attributes?["key"]?.Value;
+                if (entryKeyValue is null)
                 {
                     continue;
                 }
-
+                var path = entryKeyValue.Replace("$USER_HOME$", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                var name= entryKeyValue.Split("/")
+                    .Last();
                 // replace $USER_HOME$ with the actual user home directory
-                var path = entryKey.Replace("$USER_HOME$", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
                 // Default project name set to directory name
-                var name = entryKey.Split("/").Last();
-
                 // When file .name inside .idea folder found,
                 // use that as project name
                 var projectNamePath = path.EndsWith(".sln") // Rider seems to have different .idea path
@@ -193,29 +189,35 @@ internal static class RecentProjectsReader
                 var projectNameInfo = new FileInfo(projectNamePath);
                 if (projectNameInfo.Exists && projectNameInfo.Length > 1)
                 {
-                    name = File.ReadLines(projectNamePath).First();
+                    name = File.ReadLines(projectNamePath)
+                        .First();
                 }
 
                 // When attribute displayName found in project RecentProjectMetaInfo XML node,
                 // use that as project name
-                var metaInfoAttributes = entry.SelectSingleNode("value/RecentProjectMetaInfo")?.Attributes;
+                var metaInfoAttributes = entry.SelectSingleNode("value/RecentProjectMetaInfo")
+                    ?.Attributes;
                 if (metaInfoAttributes?["displayName"] != null)
                 {
                     name = metaInfoAttributes["displayName"].Value;
                 }
 
                 //convert timestamp to DateTime
-                var timestamp = entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='projectOpenTimestamp']")?.Attributes?["value"]?.Value;
+                var timestamp = entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='projectOpenTimestamp']")
+                    ?.Attributes?["value"]?.Value;
                 if (timestamp is null)
                 {
                     continue;
                 }
-                var lastOpened = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(timestamp)).DateTime;
+
+                var lastOpened = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(timestamp))
+                    .DateTime;
 
                 projects.Add(new RecentProject
                 {
                     Name = name,
                     Path = path,
+                    IDERecentLocationsPath = recentProjectsXMLPathFinal,
                     Application = application,
                     LastOpened = lastOpened
                 });
@@ -229,22 +231,24 @@ internal static class RecentProjectsReader
 
 public class ApplicationInfo
 {
-    public string InstallLocation { get; init; }
-    public string ExePath { get; init; }
-    public string BuildNumber { get; init; }
-    public string DisplayVersion { get; init; }
-    public string DisplayName { get; init; }
-    public string ChannelId { get; init; }
-    public string ApplicationId { get; init; }
-    public string IcoFile { get; init; }
+    public string? InstallLocation { get; init; }
+    public string? ExePath { get; init; }
+    public string? BuildNumber { get; init; }
+    public string? DisplayVersion { get; init; }
+    public string? DisplayName { get; init; }
+    public string? ChannelId { get; init; }
+    public string? ApplicationId { get; init; }
+    public string? IcoFile { get; init; }
 }
 
 public class RecentProject
 {
-    public string Name { get; init; }
-    public string Path { get; init; }
-    public ApplicationInfo Application { get; init; }
+    public string? Name { get; init; }
+    public string? Path { get; init; }
+    public string? IDERecentLocationsPath { get; init; }
+    public ApplicationInfo? Application { get; init; }
     public DateTime LastOpened { get; init; }
+    public bool IsDeleted => !File.Exists(Path) && !Directory.Exists(Path);
 }
 
 /// <summary>
@@ -265,7 +269,7 @@ public class NewOpenItem
     public string ChannelId { get; set; }
 }
 
-internal class State
+class State
 {
     /// <summary>
     ///
@@ -274,7 +278,7 @@ internal class State
     public List<Tool> Tools { get; set; }
 }
 
-internal class Tool
+class Tool
 {
     /// <summary>
     ///

@@ -1,11 +1,16 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 {
-    /// <inheritdoc cref="Flow.Launcher.Plugin.IPlugin" />
-    public class JetBrainsIDEProjects : IPlugin, ISettingProvider
+    /// <inheritdoc cref="IPlugin" />
+    public partial class JetBrainsIDEProjects : IPlugin, ISettingProvider, IContextMenu
     {
         private PluginInitContext _context;
         private Settings.Settings _settings;
@@ -28,13 +33,18 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         public List<Result> Query(Query query)
         {
             List<RecentProject> projects;
-            try {
+            try
+            {
                 var applications = RecentProjectsReader.GetApplications();
                 projects = RecentProjectsReader.GetRecentProjects(applications);
-            } catch (System.Exception e) {
+            }
+            catch (Exception e)
+            {
                 return new List<Result>(
-                    new Result[] {
-                        new Result {
+                    new[]
+                    {
+                        new Result
+                        {
                             Title = "Error reading JetBrains IDE projects",
                             SubTitle = e.Message,
                             Action = _ => false,
@@ -54,16 +64,17 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     stringToSearchIn += " " + project.Path;
                 }
-                
+
                 var score = string.IsNullOrWhiteSpace(query.Search)
                     ? 100
-                    : _context.API.FuzzySearch(query.Search, stringToSearchIn).Score;
+                    : _context.API.FuzzySearch(query.Search, stringToSearchIn)
+                        .Score;
 
                 if (score > 0)
                 {
                     results.Add(new Result
                     {
-                        Title = project.Name,
+                        Title = project.IsDeleted ? project.Name + "(deleted)" : project.Name,
                         SubTitle = project.Path,
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = actionContext =>
@@ -77,14 +88,29 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                             }
 
                             _context.API.ShellRun($"\"{project.Path}\"", project.Application.ExePath);
-                            
+
                             return closeMainWindow;
                         },
+                        ContextData = project,
                         Score = score
                     });
                 }
             }
 
+            results.Add(new Result()
+            {
+                Title = "Prune all deleted projects",
+                Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                Action = _ =>
+                {
+                    foreach (var prunableProject in projects.Where(x => x.IsDeleted))
+                    {
+                        ProjectsPruner.Prune(prunableProject);
+                    }
+
+                    return true;
+                },
+            });
             return results;
         }
 
@@ -92,6 +118,46 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         public Control CreateSettingPanel()
         {
             return new SettingsControl(_settings);
+        }
+
+        public List<Result> LoadContextMenus(Result selectedResult)
+        {
+            if (selectedResult.ContextData is null)
+                return [];
+            var proj = (RecentProject)selectedResult.ContextData;
+            var results = new List<Result>();
+            if (!proj.IsDeleted)
+            {
+                results.Add(
+                    new Result
+                    {
+                        Title = "Open in explorer",
+                        Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xED43"),
+                        Action = _ =>
+                        {
+                            var projectDirPath = Regex.Replace(proj.Path, "(.*)(/)(.*\\..*)", "$1");
+                            _context.API.ShellRun($"""
+                                                   -Command "Start-Process '{projectDirPath}'"
+                                                   """, "pwsh.exe");
+                            return true;
+                        }
+                    }
+                );
+            }
+
+            results.Add(
+                new Result
+                {
+                    Title = "Prune project",
+                    Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                    Action = _ =>
+                    {
+                        ProjectsPruner.Prune(proj);
+                        return true;
+                    }
+                }
+            );
+            return results;
         }
     }
 }
