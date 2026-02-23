@@ -1,11 +1,13 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 {
     /// <inheritdoc cref="Flow.Launcher.Plugin.IPlugin" />
-    public class JetBrainsIDEProjects : IPlugin, ISettingProvider
+    public class JetBrainsIDEProjects : IPlugin, ISettingProvider, IContextMenu
     {
         private PluginInitContext _context;
         private Settings.Settings _settings;
@@ -63,7 +65,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     results.Add(new Result
                     {
-                        Title = project.Name,
+                        Title = project.IsDeleted ? project.Name + "(deleted)" : project.Name,
                         SubTitle = project.Path,
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = actionContext =>
@@ -80,11 +82,26 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                             
                             return closeMainWindow;
                         },
+                        ContextData = project,
                         Score = score
                     });
                 }
             }
 
+            results.Add(new Result()
+            {
+                Title = "Prune all deleted projects",
+                Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                Action = _ =>
+                {
+                    foreach (var prunableProject in projects.Where(x => x.IsDeleted))
+                    {
+                        ProjectsPruner.Prune(prunableProject);
+                    }
+
+                    return true;
+                },
+            });
             return results;
         }
 
@@ -92,6 +109,28 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         public Control CreateSettingPanel()
         {
             return new SettingsControl(_settings);
+        }
+
+        public List<Result> LoadContextMenus(Result selectedResult)
+        {
+            if (selectedResult.ContextData is null)
+                return new List<Result>();
+            var proj = (RecentProject)selectedResult.ContextData;
+            var results = new List<Result>();
+
+            results.Add(
+                new Result
+                {
+                    Title = "Prune project",
+                    Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                    Action = _ =>
+                    {
+                        ProjectsPruner.Prune(proj);
+                        return true;
+                    }
+                }
+            );
+            return results;
         }
     }
 }

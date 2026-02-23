@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Windows.Input;
 using System.Xml;
-using static System.Runtime.CompilerServices.RuntimeHelpers;
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects;
 
@@ -156,19 +154,12 @@ internal static class RecentProjectsReader
 
             var recentProjectsXML = new XmlDocument();
             recentProjectsXML.Load(recentProjectsXMLPathFinal);
-            var entries = recentProjectsXML.SelectNodes(
-                "/application/component[@name='RecentProjectsManager']/option[@name='additionalInfo']/map/entry");
 
+            var entries = recentProjectsXML.GetEntries();
             if (entries is null || entries.Count == 0)
             {
-                // try again with RiderRecentProjectsManager
-                entries = recentProjectsXML.SelectNodes(
-                "/application/component[@name='RiderRecentProjectsManager']/option[@name='additionalInfo']/map/entry");
-                if (entries is null || entries.Count == 0)
-                {
-                    Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): No recent projects found");
-                    continue;
-                }
+                Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): No recent projects found");
+                continue;
             }
 
             foreach (XmlNode entry in entries)
@@ -216,6 +207,7 @@ internal static class RecentProjectsReader
                 {
                     Name = name,
                     Path = path,
+                    IDERecentLocationsPath = recentProjectsXMLPathFinal,
                     Application = application,
                     LastOpened = lastOpened
                 });
@@ -243,8 +235,10 @@ public class RecentProject
 {
     public string Name { get; init; }
     public string Path { get; init; }
+    public string IDERecentLocationsPath { get; init; }
     public ApplicationInfo Application { get; init; }
     public DateTime LastOpened { get; init; }
+    public bool IsDeleted => !File.Exists(Path) && !Directory.Exists(Path);
 }
 
 /// <summary>
