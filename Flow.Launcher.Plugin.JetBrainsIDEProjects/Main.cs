@@ -117,6 +117,24 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 return new List<Result>();
             var proj = (RecentProject)selectedResult.ContextData;
             var results = new List<Result>();
+            if (!proj.IsDeleted)
+            {
+                results.Add(
+                    new Result
+                    {
+                        Title = "Open in explorer",
+                        Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xED43"),
+                        Action = _ =>
+                        {
+                            var projectDirPath = Regex.Replace(proj.Path, "(.*)(/)(.*\\..*)", "$1");
+                            _context.API.ShellRun($"""
+                                                   -Command "Start-Process '{projectDirPath}'"
+                                                   """, "pwsh.exe");
+                            return true;
+                        }
+                    }
+                );
+            }
 
             results.Add(
                 new Result
