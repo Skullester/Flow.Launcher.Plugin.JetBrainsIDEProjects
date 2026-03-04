@@ -59,6 +59,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 
             foreach (var project in projects)
             {
+                if (project.IsDeleted) continue;
                 var stringToSearchIn = project.Name;
                 if (_settings.IncludePathInSearch)
                 {
@@ -74,7 +75,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     results.Add(new Result
                     {
-                        Title = project.IsDeleted ? project.Name + "(deleted)" : project.Name,
+                        Title =  project.Name,
                         SubTitle = project.Path,
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = actionContext =>
@@ -97,7 +98,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 }
             }
 
-            results.Add(new Result()
+            /*results.Add(new Result()
             {
                 Title = "Prune all deleted projects",
                 Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
@@ -110,7 +111,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 
                     return true;
                 },
-            });
+            });*/
             return results;
         }
 
@@ -135,7 +136,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xED43"),
                         Action = _ =>
                         {
-                            var projectDirPath = Regex.Replace(proj.Path, "(.*)(/)(.*\\..*)", "$1");
+                            var projectDirPath = Regex.Replace(proj.Path, @"([\\/][^/\\]*\.[^/\\]*$)", "");
                             _context.API.ShellRun($"""
                                                    -Command "Start-Process '{projectDirPath}'"
                                                    """, "pwsh.exe");
