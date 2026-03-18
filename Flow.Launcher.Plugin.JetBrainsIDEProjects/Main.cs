@@ -75,7 +75,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     results.Add(new Result
                     {
-                        Title =  project.Name,
+                        Title = project.Name,
                         SubTitle = project.Path,
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = actionContext =>
@@ -97,8 +97,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
-
-            /*results.Add(new Result()
+            results.Add(new Result()
             {
                 Title = "Prune all deleted projects",
                 Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
@@ -111,7 +110,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 
                     return true;
                 },
-            });*/
+            });
             return results;
         }
 
