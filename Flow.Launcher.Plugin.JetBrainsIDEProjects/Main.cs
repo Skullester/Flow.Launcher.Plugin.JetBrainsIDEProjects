@@ -66,10 +66,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     stringToSearchIn += " " + project.Path;
                 }
 
-                var score = string.IsNullOrWhiteSpace(query.Search)
-                    ? 100
-                    : _context.API.FuzzySearch(query.Search, stringToSearchIn)
-                        .Score;
+                var score = GetScore(query.Search, stringToSearchIn);
 
                 if (score > 0)
                 {
@@ -97,21 +94,36 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
-            results.Add(new Result()
-            {
-                Title = "Prune all deleted projects",
-                Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
-                Action = _ =>
-                {
-                    foreach (var prunableProject in projects.Where(x => x.IsDeleted))
-                    {
-                        ProjectsPruner.Prune(prunableProject);
-                    }
 
-                    return true;
-                },
-            });
+            const string pruneAllDeletedProjects = "Prune all deleted projects";
+            var score2 = GetScore(query.Search, pruneAllDeletedProjects);
+            if (score2 > 0)
+            {
+                results.Add(new Result()
+                {
+                    Title = pruneAllDeletedProjects,
+                    Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                    Action = _ =>
+                    {
+                        foreach (var prunableProject in projects.Where(x => x.IsDeleted))
+                        {
+                            ProjectsPruner.Prune(prunableProject);
+                        }
+
+                        return true;
+                    },
+                    Score = score2
+                });
+            }
             return results;
+        }
+
+        private int GetScore(string query, string toCompare)
+        {
+            return string.IsNullOrWhiteSpace(query)
+                ? 100
+                : _context.API.FuzzySearch(query, toCompare)
+                    .Score;
         }
 
         /// <inheritdoc />
