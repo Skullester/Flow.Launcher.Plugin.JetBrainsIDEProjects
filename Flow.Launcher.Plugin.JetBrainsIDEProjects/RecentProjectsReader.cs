@@ -251,29 +251,8 @@ public class RecentProject
     public bool IsDeleted => !File.Exists(Path) && !Directory.Exists(Path);
 }
 
-/// <summary>
-///
-/// </summary>
-public class NewOpenItem
-{
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("toolId")]
-    public string ToolId { get; set; }
-
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("channelId")]
-    public string ChannelId { get; set; }
-}
-
 class State
 {
-    /// <summary>
-    ///
-    /// </summary>
     [JsonPropertyName("tools")]
     public List<Tool> Tools { get; set; }
 }

@@ -59,7 +59,8 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 
             foreach (var project in projects)
             {
-                if (project.IsDeleted) continue;
+                if (project.IsDeleted)
+                    continue;
                 var stringToSearchIn = project.Name;
                 if (_settings.IncludePathInSearch)
                 {
@@ -94,27 +95,6 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
-
-            const string pruneAllDeletedProjects = "Prune all deleted projects";
-            var score2 = GetScore(query.Search, pruneAllDeletedProjects);
-            if (score2 > 0)
-            {
-                results.Add(new Result()
-                {
-                    Title = pruneAllDeletedProjects,
-                    Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
-                    Action = _ =>
-                    {
-                        foreach (var prunableProject in projects.Where(x => x.IsDeleted))
-                        {
-                            ProjectsPruner.Prune(prunableProject);
-                        }
-
-                        return true;
-                    },
-                    Score = score2
-                });
-            }
             return results;
         }
 
@@ -148,9 +128,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Action = _ =>
                         {
                             var projectDirPath = Regex.Replace(proj.Path, @"([\\/][^/\\]*\.[^/\\]*$)", "");
-                            _context.API.ShellRun($"""
-                                                   -Command "Start-Process '{projectDirPath}'"
-                                                   """, "pwsh.exe");
+                            _context.API.OpenDirectory(projectDirPath);
                             return true;
                         }
                     }
