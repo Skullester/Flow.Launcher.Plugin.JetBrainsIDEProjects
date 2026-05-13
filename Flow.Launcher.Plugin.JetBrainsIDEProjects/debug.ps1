@@ -13,11 +13,11 @@ if (Test-Path $flowLauncherExe) {
 	    "Flow.Launcher.Plugin.$project.dll",
 	    'plugin.json',
 	    'icon.png')
-
+    Write-Host "Copying binaries..."
     Set-Location $bin
     mkdir $dest -Force -ErrorAction Ignore | Out-Null
     Copy-Item $files $dest -Force -Recurse
-    
+    Write-Host "Starting FlowLauncher..."
     & $flowLauncherExe
 }
 else

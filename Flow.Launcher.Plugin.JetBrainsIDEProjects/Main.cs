@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
@@ -95,6 +95,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
+
             return results;
         }
 
@@ -120,6 +121,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             var results = new List<Result>();
             if (!proj.IsDeleted)
             {
+                var projectDirPath = CurrentDirRegex().Replace(proj.Path, "");
                 results.Add(
                     new Result
                     {
@@ -127,8 +129,24 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xED43"),
                         Action = _ =>
                         {
-                            var projectDirPath = Regex.Replace(proj.Path, @"([\\/][^/\\]*\.[^/\\]*$)", "");
                             _context.API.OpenDirectory(projectDirPath);
+                            return true;
+                        }
+                    }
+                );
+                results.Add(
+                    new Result
+                    {
+                        Title = "Open With Shell: pwsh",
+                        Glyph = new GlyphInfo(FontFamily: "/Resources/#Segoe Fluent Icons", Glyph: "\ue756"),
+                        Action = _ =>
+                        {
+                            ProcessStartInfo psi = new()
+                            {
+                                FileName = "pwsh.exe",
+                                WorkingDirectory = projectDirPath
+                            };
+                            Process.Start(psi);
                             return true;
                         }
                     }
@@ -149,5 +167,8 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             );
             return results;
         }
+
+        [GeneratedRegex(@"([\\/][^/\\]*\.[^/\\]*$)")]
+        private static partial Regex CurrentDirRegex();
     }
 }
