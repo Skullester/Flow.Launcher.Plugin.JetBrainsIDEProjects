@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
@@ -67,7 +68,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     stringToSearchIn += " " + project.Path;
                 }
 
-                var score = GetScore(query.Search, stringToSearchIn);
+                var score = GetScore(query.Search, stringToSearchIn, true);
 
                 if (score > 0)
                 {
@@ -95,13 +96,33 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
+            const string pruneAllDeletedProjects = "Prune all deleted projects";
+            var score2 = GetScore(query.Search, pruneAllDeletedProjects, false);
+            if (score2 > 0)
+            {
+                results.Add(new Result()
+                {
+                    Title = pruneAllDeletedProjects,
+                    Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
+                    Action = _ =>
+                    {
+                        foreach (var prunableProject in projects.Where(x => x.IsDeleted))
+                        {
+                            ProjectsPruner.Prune(prunableProject);
+                        }
+
+                        return true;
+                    },
+                    Score = score2
+                });
+            }
 
             return results;
         }
 
-        private int GetScore(string query, string toCompare)
+        private int GetScore(string query, string toCompare, bool canBeEmpty)
         {
-            return string.IsNullOrWhiteSpace(query)
+            return string.IsNullOrWhiteSpace(query) && canBeEmpty
                 ? 100
                 : _context.API.FuzzySearch(query, toCompare)
                     .Score;
