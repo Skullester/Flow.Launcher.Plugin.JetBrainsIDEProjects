@@ -207,6 +207,11 @@ static partial class RecentProjectsReader
                     ?.Attributes?["value"]?.Value;
                 if (timestamp is null)
                 {
+                    timestamp = entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='activationTimestamp']")?.Attributes["value"]?.Value;
+                }
+
+                if (timestamp is null)
+                {
                     continue;
                 }
 
