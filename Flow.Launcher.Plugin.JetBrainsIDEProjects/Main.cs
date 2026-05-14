@@ -96,6 +96,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     });
                 }
             }
+
             const string pruneAllDeletedProjects = "Prune all deleted projects";
             var score2 = GetScore(query.Search, pruneAllDeletedProjects, false);
             if (score2 > 0)
@@ -179,9 +180,9 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     Title = "Prune project",
                     Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
-                    Action = _ =>
+                    AsyncAction = async _ =>
                     {
-                        ProjectsPruner.Prune(proj);
+                        await ProjectsPruner.Prune(proj);
                         return true;
                     }
                 }
