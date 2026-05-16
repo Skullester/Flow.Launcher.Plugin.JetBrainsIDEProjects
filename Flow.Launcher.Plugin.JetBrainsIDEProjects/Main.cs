@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
 
@@ -105,11 +106,11 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 {
                     Title = pruneAllDeletedProjects,
                     Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
-                    Action = _ =>
+                    AsyncAction = async _ =>
                     {
                         foreach (var prunableProject in projects.Where(x => x.IsDeleted))
                         {
-                            ProjectsPruner.Prune(prunableProject);
+                            await HandlePruneTask(prunableProject);
                         }
 
                         return true;
@@ -119,6 +120,16 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             }
 
             return results;
+        }
+
+        private async Task HandlePruneTask(RecentProject prunableProject)
+        {
+            var pruneTask = ProjectsPruner.Prune(prunableProject);
+            if (!pruneTask.IsCompleted)
+            {
+                _context.API.HideMainWindow();
+            }
+            await pruneTask;
         }
 
         private int GetScore(string query, string toCompare, bool canBeEmpty)
@@ -182,7 +193,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
                     AsyncAction = async _ =>
                     {
-                        await ProjectsPruner.Prune(proj);
+                        await HandlePruneTask(proj);
                         return true;
                     }
                 }
