@@ -13,11 +13,7 @@ public static partial class ProjectsPruner
     public static async Task Prune(RecentProject project)
     {
         var ideName = project.Application.DisplayName.ToLower();
-        while (IsIDERunning(ideName))
-        {
-            await Task.Delay(TimeSpan.FromMinutes(5));
-        }
-
+        await WaitTillIdeIsClosed(ideName);
         var xmlDoc = new XmlDocument();
         xmlDoc.Load(project.IDERecentLocationsPath!);
         var entries = xmlDoc.GetEntries();
@@ -29,9 +25,14 @@ public static partial class ProjectsPruner
         xmlDoc.Save(project.IDERecentLocationsPath!);
     }
 
-    private static bool IsIDERunning(string ideName)
+    private static async Task WaitTillIdeIsClosed(string ideName)
     {
-        var riderProcesses = Process.GetProcessesByName($"{ideName}{(Environment.Is64BitOperatingSystem ? "64" : "32")}");
-        return riderProcesses.Any();
+        var ideProcesses = Process.GetProcessesByName($"{ideName}{(Environment.Is64BitOperatingSystem ? "64" : "32")}");
+        using var process = ideProcesses.FirstOrDefault();
+        if (process is null)
+        {
+            return;
+        }
+        await process.WaitForExitAsync();
     }
 }

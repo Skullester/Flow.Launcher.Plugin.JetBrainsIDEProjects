@@ -127,9 +127,16 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             var pruneTask = ProjectsPruner.Prune(prunableProject);
             if (!pruneTask.IsCompleted)
             {
+                ShowMsgPruningScheduled();
                 _context.API.HideMainWindow();
             }
             await pruneTask;
+            _context.API.ShowMsg($"Project '{prunableProject.Name}' has been pruned");
+        }
+
+        private void ShowMsgPruningScheduled()
+        {
+            _context.API.ShowMsg("Pruning has been scheduled");
         }
 
         private int GetScore(string query, string toCompare, bool canBeEmpty)
