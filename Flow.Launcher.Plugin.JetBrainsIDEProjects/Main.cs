@@ -131,18 +131,20 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                 context.API.HideMainWindow();
             }
 
-            try
+            var (pruningResult, message) = await pruneTask;
+            switch (pruningResult)
             {
-                await pruneTask;
+                case PruningResult.Error:
+                    context.API.LogWarn(nameof(JetBrainsIDEProjects), message);
+                    context.API.ShowMsgError("Prune failed");
+                    break;
+                case PruningResult.AlreadyScheduled:
+                    context.API.ShowMsgError(nameof(JetBrainsIDEProjects), message);
+                    break;
+                case PruningResult.Success:
+                    context.API.ShowMsg($"Project '{prunableProject.Name}' has been pruned");
+                    break;
             }
-            catch (ArgumentException e)
-            {
-                context.API.LogException(nameof(JetBrainsIDEProjects), e.Message, e);
-                context.API.ShowMsgError("Prune failed");
-                return;
-            }
-
-            context.API.ShowMsg($"Project '{prunableProject.Name}' has been pruned");
         }
 
         private void ShowMsgPruningScheduled()
