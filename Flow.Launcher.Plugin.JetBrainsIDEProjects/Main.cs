@@ -14,16 +14,16 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
     /// <inheritdoc cref="IPlugin" />
     public partial class JetBrainsIDEProjects : IPlugin, ISettingProvider, IContextMenu
     {
-        private PluginInitContext _context;
+        private PluginInitContext context;
         private Settings.Settings _settings;
 
         /// <inheritdoc />
         public void Init(PluginInitContext context)
         {
-            _context = context;
-            if (_context?.API != null)
+            this.context = context;
+            if (this.context?.API != null)
             {
-                _settings = _context.API.LoadSettingJsonStorage<Settings.Settings>();
+                _settings = this.context.API.LoadSettingJsonStorage<Settings.Settings>();
             }
             else
             {
@@ -85,10 +85,10 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 
                             if (!closeMainWindow && resetQuery)
                             {
-                                _context.API.ChangeQuery(_context.CurrentPluginMetadata.ActionKeyword + " ");
+                                context.API.ChangeQuery(context.CurrentPluginMetadata.ActionKeyword + " ");
                             }
 
-                            _context.API.ShellRun($"\"{project.Path}\"", project.Application.ExePath);
+                            context.API.ShellRun($"\"{project.Path}\"", project.Application.ExePath);
 
                             return closeMainWindow;
                         },
@@ -128,22 +128,33 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             if (!pruneTask.IsCompleted)
             {
                 ShowMsgPruningScheduled();
-                _context.API.HideMainWindow();
+                context.API.HideMainWindow();
             }
-            await pruneTask;
-            _context.API.ShowMsg($"Project '{prunableProject.Name}' has been pruned");
+
+            try
+            {
+                await pruneTask;
+            }
+            catch (ArgumentException e)
+            {
+                context.API.LogException(nameof(JetBrainsIDEProjects), e.Message, e);
+                context.API.ShowMsgError("Prune failed");
+                return;
+            }
+
+            context.API.ShowMsg($"Project '{prunableProject.Name}' has been pruned");
         }
 
         private void ShowMsgPruningScheduled()
         {
-            _context.API.ShowMsg("Pruning has been scheduled");
+            context.API.ShowMsg("Pruning has been scheduled");
         }
 
         private int GetScore(string query, string toCompare, bool canBeEmpty)
         {
             return string.IsNullOrWhiteSpace(query) && canBeEmpty
                 ? 100
-                : _context.API.FuzzySearch(query, toCompare)
+                : context.API.FuzzySearch(query, toCompare)
                     .Score;
         }
 
@@ -169,7 +180,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xED43"),
                         Action = _ =>
                         {
-                            _context.API.OpenDirectory(projectDirPath);
+                            context.API.OpenDirectory(projectDirPath);
                             return true;
                         }
                     }
@@ -181,7 +192,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Glyph = new GlyphInfo(FontFamily: "/Resources/#Segoe Fluent Icons", Glyph: "\ue756"),
                         Action = _ =>
                         {
-                            ProcessStartInfo psi = new()
+                            var psi = new ProcessStartInfo
                             {
                                 FileName = "pwsh.exe",
                                 WorkingDirectory = projectDirPath
