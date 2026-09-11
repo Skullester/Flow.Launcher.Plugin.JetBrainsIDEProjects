@@ -249,7 +249,7 @@ public class ApplicationInfo
 public class RecentProject
 {
     public string? Name { get; init; }
-    public string? Path { get; init; }
+    public required string Path { get; init; }
     public string? IDERecentLocationsPath { get; init; }
     public ApplicationInfo? Application { get; init; }
     public DateTime LastOpened { get; init; }

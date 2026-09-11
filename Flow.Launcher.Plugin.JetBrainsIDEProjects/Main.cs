@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
@@ -181,7 +181,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             var results = new List<Result>();
             if (!proj.IsDeleted)
             {
-                var projectDirPath = CurrentDirRegex().Replace(proj.Path, "");
+                var projectDirPath = new FileInfo(proj.Path).Directory!.FullName;
                 results.Add(
                     new Result
                     {
@@ -227,8 +227,5 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             );
             return results;
         }
-
-        [GeneratedRegex(@"([\\/][^/\\]*\.[^/\\]*$)")]
-        private static partial Regex CurrentDirRegex();
     }
 }
