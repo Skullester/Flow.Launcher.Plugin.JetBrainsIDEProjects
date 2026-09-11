@@ -108,7 +108,14 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                     Glyph = new GlyphInfo("Segoe MDL2 Assets", "\xF78A"),
                     AsyncAction = async _ =>
                     {
-                        foreach (var prunableProject in projects.Where(x => x.IsDeleted))
+                        var prunableProjects = projects.Where(x => x.IsDeleted).ToArray();
+                        if (prunableProjects.Length is 0)
+                        {
+                            context.API.ShowMsg("Nothing to prune");
+                            return true;
+                        }
+    
+                        foreach (var prunableProject in prunableProjects)
                         {
                             await HandlePruneTask(prunableProject);
                         }
